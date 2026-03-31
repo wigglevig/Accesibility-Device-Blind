@@ -147,9 +147,9 @@ else:
 print(f"Using device: {device}")
 
 general_model = YOLO("yolov8n.pt")
-stairs_model_path = "/Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/runs/detect/train6/weights/best.pt"
+stairs_model_path = "runs/detect/train6/weights/best.pt"
 stairs_model = YOLO(stairs_model_path)
-door_handle_model_path = "/Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/runs/detect/train24/weights/best.pt"
+door_handle_model_path = "runs/detect/train24/weights/best.pt"
 door_handle_model = YOLO(door_handle_model_path)
 
 depth_model, transform = depth_pro.create_model_and_transforms()

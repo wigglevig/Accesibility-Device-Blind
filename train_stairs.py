@@ -45,7 +45,7 @@ print(f"Using device: {device}")
 
 # ---- Load Models ----
 general_model = YOLO("yolov8x.pt").to(device)  # Load YOLOv8n model
-stairs_model_path = "/Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/runs/detect/train6/weights/best.pt"
+stairs_model_path = "runs/detect/train6/weights/best.pt"
 stairs_model = YOLO(stairs_model_path).to(device)  # Load stairs model
 
 # ---- Define Vibrant Colors for Each Class ----

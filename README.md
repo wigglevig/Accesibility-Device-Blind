@@ -99,5 +99,5 @@ Edit
 ```
 
 👨‍🔬 Author
-Made with ❤️ by Aditya Tripathi (BENi-Aditya)
+Made with ❤️ by wigglevig
 

@@ -132,7 +132,7 @@ else:
     device = torch.device("cpu")
 print(f"Using device: {device}")
 general_model = YOLO("yolov8n.pt")
-stairs_model_path = "/Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/runs/detect/train6/weights/best.pt"
+stairs_model_path = "runs/detect/train6/weights/best.pt"
 stairs_model = YOLO(stairs_model_path)
 depth_model, transform = depth_pro.create_model_and_transforms()
 depth_model = depth_model.to(device)

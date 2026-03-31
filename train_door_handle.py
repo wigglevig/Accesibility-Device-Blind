@@ -9,7 +9,7 @@ print("Current Working Directory:", os.getcwd())
 
 # Path to your dataset YAML file for door-handle detection.
 # Make sure your data.yaml is updated and your folder structure matches.
-data_yaml_path = "/Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/Just_Handle_door/data.yaml"
+data_yaml_path = "Just_Handle_door/data.yaml"
 
 # Initialize a YOLOv8 model.
 # (We use yolov8n.pt as a starting point, as used for the stairs model.)

@@ -1,6 +1,6 @@
 ---
 title: "BlindSight"
-author: "Aditya Tripathi (@BENi-Aditya)"
+author: "wigglevig (@wigglevig)"
 description: "A wearable assistant using Raspberry Pi to help blind individuals navigate independently."
 created_at: "2025-07-21"
 ---
