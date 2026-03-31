@@ -1,0 +1,20 @@
+# Smart Vision Assistant — Python Dependencies
+# Core
+torch
+torchvision
+ultralytics
+opencv-python
+numpy
+Pillow
+
+# Audio
+pyttsx3
+SpeechRecognition
+pyaudio
+
+# AI Assistant
+google-genai
+python-dotenv
+
+# RPi-specific (install only on Raspberry Pi)
+# RPi.GPIO  # Usually pre-installed on Raspberry Pi OS

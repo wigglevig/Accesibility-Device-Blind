@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['0', '1', '2']
+
+roboflow:
+  workspace: blindassist
+  project: stairs-for-blind
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/blindassist/stairs-for-blind/dataset/1

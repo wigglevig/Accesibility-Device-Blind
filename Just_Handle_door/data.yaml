@@ -1,0 +1,8 @@
+path: /Users/tripathd/Downloads/Manual Library/Projects/Accesbility_Device/Just_Handle_door
+
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: door_handle
