@@ -101,7 +101,7 @@ pip install -q torch torchvision torchaudio 2>/dev/null || \
 # Core packages (without pyaudio — installed separately below)
 pip install -q \
     ultralytics \
-    opencv-python-headless \
+    opencv-python \
     numpy \
     Pillow \
     pyttsx3 \

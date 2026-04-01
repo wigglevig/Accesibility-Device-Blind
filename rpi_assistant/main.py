@@ -24,8 +24,9 @@ import time
 import threading
 import signal
 import sys
+import cv2
 
-from rpi_assistant.config import DEV_MODE, RUNNING_ON_RPI, USE_KEYBOARD_INPUT
+from rpi_assistant.config import DEV_MODE, RUNNING_ON_RPI, USE_KEYBOARD_INPUT, SHOW_VIDEO_PREVIEW
 from rpi_assistant.audio_engine import AudioEngine, Priority
 from rpi_assistant.button_handler import ButtonHandler
 from rpi_assistant.camera import Camera
@@ -43,6 +44,8 @@ class VisionAssistant:
 
     def __init__(self):
         self._running = False
+        self._busy = False
+        self._last_detections = []  # Store latest YOLO detections for video overlay
 
         # Initialize components
         print("=" * 50)
@@ -139,14 +142,75 @@ class VisionAssistant:
         """Main run loop. Blocks until stopped."""
         self.start()
 
-        # Keep the main thread alive
         try:
-            while self._running and self.buttons._running:
-                time.sleep(0.5)
+            if SHOW_VIDEO_PREVIEW:
+                self._run_with_video()
+            else:
+                # No video — just keep the main thread alive
+                while self._running and self.buttons._running:
+                    time.sleep(0.5)
         except KeyboardInterrupt:
             print("\n[MAIN] Interrupted by user")
 
         self.stop()
+
+    def _run_with_video(self):
+        """Main loop with live camera preview window."""
+        print("[VIDEO] Opening preview window (press 'q' in window to quit)")
+        window_name = "BlindSight - Camera Feed"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(window_name, 640, 480)
+
+        while self._running and self.buttons._running:
+            frame = self.camera.get_frame()
+            if frame is None:
+                time.sleep(0.1)
+                continue
+
+            # Run a lightweight YOLO detection for the overlay
+            try:
+                detections = self.detector.detect(frame)
+                self._last_detections = detections
+            except Exception:
+                detections = self._last_detections
+
+            # Draw detection boxes on frame
+            for det in detections:
+                x1, y1, x2, y2 = det.box
+                # Color: green for far, yellow for medium, red for close
+                h = frame.shape[0]
+                box_h = y2 - y1
+                ratio = box_h / h
+                if ratio > 0.6:
+                    color = (0, 0, 255)     # Red — close
+                elif ratio > 0.3:
+                    color = (0, 200, 255)   # Yellow — medium
+                else:
+                    color = (0, 255, 0)     # Green — far
+
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+                label = f"{det.label} {det.confidence:.0%}"
+                cv2.putText(frame, label, (x1, y1 - 8),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+            # Status bar at bottom
+            bar_y = frame.shape[0] - 25
+            cv2.rectangle(frame, (0, bar_y), (frame.shape[1], frame.shape[0]), (40, 40, 40), -1)
+            status = "1=Describe  2=Ask AI  3=Objects  q=Quit"
+            if self._busy:
+                status = "Processing..."
+            cv2.putText(frame, status, (10, frame.shape[0] - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200, 200, 200), 1)
+
+            cv2.imshow(window_name, frame)
+
+            # Check for 'q' key in the video window (non-blocking, 30ms wait)
+            key = cv2.waitKey(30) & 0xFF
+            if key == ord('q'):
+                print("[VIDEO] Quit from video window")
+                break
+
+        cv2.destroyAllWindows()
 
     def stop(self):
         """Gracefully shut down all components."""

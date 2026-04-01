@@ -5,6 +5,11 @@ Edit this file to customize behavior for your hardware setup.
 import os
 from dotenv import load_dotenv
 
+# Fix "Illegal instruction" crash on Raspberry Pi 4 (ARM Cortex-A72)
+# OpenBLAS (used by numpy/torch) tries to auto-detect CPU and may pick
+# wrong instructions. Force ARMV8 to prevent SIGILL.
+os.environ.setdefault("OPENBLAS_CORETYPE", "ARMV8")
+
 # Load environment variables from .env file (project root)
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
@@ -16,6 +21,10 @@ load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 CAMERA_INDEX = 0                    # USB camera index (usually 0)
 CAMERA_WIDTH = 640                  # Frame width (lower = faster on RPi)
 CAMERA_HEIGHT = 480                 # Frame height
+
+# Show a live camera preview window (useful for debugging with a monitor)
+# Set to False for headless / production use
+SHOW_VIDEO_PREVIEW = True
 
 # GPIO Pin Assignments (BCM numbering)
 # Set to None to disable a component you don't have wired
