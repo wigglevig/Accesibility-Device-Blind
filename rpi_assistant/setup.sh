@@ -2,37 +2,55 @@
 # ============================================================
 # Smart Vision Assistant — Raspberry Pi Setup Script
 # ============================================================
-# Run this on a fresh Raspberry Pi 4B to set everything up.
+# Tested on: Raspberry Pi 4B (8GB), Raspberry Pi OS 64-bit (Bookworm)
 #
 # Usage:
-#   chmod +x setup.sh
-#   ./setup.sh
+#   chmod +x rpi_assistant/setup.sh
+#   ./rpi_assistant/setup.sh
+#
+# What this does:
+#   1. Installs system-level packages (audio, camera, dev tools)
+#   2. Creates a Python virtual environment
+#   3. Installs Python dependencies (PyTorch, YOLO, etc.)
+#   4. Downloads the YOLOv8 nano model
+#   5. Tests audio output
+#   6. Creates a systemd service for auto-start on boot
 # ============================================================
 
-set -e  # Exit on error
+set -e
 
 echo "============================================"
 echo "  Smart Vision Assistant — RPi Setup"
 echo "============================================"
 echo ""
 
-# 1. System dependencies
+# Determine project root (parent of the directory containing this script)
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+PROJECT_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
+cd "$PROJECT_DIR"
+
+echo "Project directory: $PROJECT_DIR"
+echo ""
+
+# ----- Step 1: System dependencies -----
 echo "[1/6] Installing system dependencies..."
 sudo apt-get update -qq
+
+# Core dependencies that exist across RPi OS versions
+# Using || true per package to skip unavailable ones gracefully
 sudo apt-get install -y -qq \
     python3-pip \
     python3-venv \
     python3-dev \
+    git \
     portaudio19-dev \
     espeak \
+    espeak-ng \
+    flac \
     libatlas-base-dev \
-    libjasper-dev \
-    libqtgui4 \
-    libqt4-test \
     libhdf5-dev \
     libharfbuzz-dev \
     libwebp-dev \
-    libtiff5 \
     libjpeg-dev \
     libpng-dev \
     libavcodec-dev \
@@ -40,34 +58,41 @@ sudo apt-get install -y -qq \
     libswscale-dev \
     libv4l-dev \
     v4l-utils \
-    flac \
     2>/dev/null || true
 
-echo "  ✅ System dependencies installed"
+# These may not exist on Bookworm — install if available, skip if not
+sudo apt-get install -y -qq libtiff5 2>/dev/null || \
+    sudo apt-get install -y -qq libtiff-dev 2>/dev/null || true
+sudo apt-get install -y -qq libopenjp2-7 2>/dev/null || true
 
-# 2. Create virtual environment
+echo "  Done."
+
+# ----- Step 2: Virtual environment -----
 echo ""
 echo "[2/6] Creating Python virtual environment..."
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-cd "$SCRIPT_DIR/.."
 
 if [ ! -d "venv" ]; then
     python3 -m venv venv
-    echo "  ✅ Virtual environment created"
+    echo "  Created."
 else
-    echo "  ⏭️  Virtual environment already exists"
+    echo "  Already exists, skipping."
 fi
 
 source venv/bin/activate
 pip install --upgrade pip -q
 
-# 3. Install Python packages
+# ----- Step 3: Python packages -----
 echo ""
-echo "[3/6] Installing Python packages (this may take 5-10 minutes)..."
-pip install -q \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu \
-    2>/dev/null || pip install -q torch torchvision
+echo "[3/6] Installing Python packages..."
+echo "  This will take 5-15 minutes on first run."
+echo ""
 
+# PyTorch — aarch64 wheels available via pip on 64-bit RPi OS
+pip install -q torch torchvision torchaudio 2>/dev/null || \
+    pip install -q torch torchvision 2>/dev/null || \
+    echo "  WARNING: PyTorch install failed. Try manually: pip install torch torchvision"
+
+# Everything else
 pip install -q \
     ultralytics \
     opencv-python-headless \
@@ -77,35 +102,44 @@ pip install -q \
     SpeechRecognition \
     pyaudio \
     google-genai \
-    RPi.GPIO \
-    2>/dev/null || true
+    python-dotenv
 
-echo "  ✅ Python packages installed"
+# RPi.GPIO — usually pre-installed, but ensure it's in the venv
+pip install -q RPi.GPIO 2>/dev/null || true
 
-# 4. Download YOLO model
+echo "  Done."
+
+# ----- Step 4: YOLO model -----
 echo ""
 echo "[4/6] Downloading YOLOv8 nano model..."
 python3 -c "
 from ultralytics import YOLO
 model = YOLO('yolov8n.pt')
-print('  ✅ YOLOv8 nano model ready')
+print('  Done.')
 "
 
-# 5. Test audio
+# ----- Step 5: Audio test -----
 echo ""
 echo "[5/6] Testing audio output..."
 python3 -c "
 import pyttsx3
 engine = pyttsx3.init()
 engine.setProperty('rate', 160)
-engine.say('Audio test successful. Vision assistant setup is complete.')
+engine.say('Audio test. Vision assistant setup is complete.')
 engine.runAndWait()
-print('  ✅ Audio output working')
-" 2>/dev/null || echo "  ⚠️  Audio test failed — check speaker connection"
+print('  Done.')
+" 2>/dev/null || echo "  WARNING: Audio test failed. Check speaker/headphone connection."
 
-# 6. Create systemd service for auto-start
+# ----- Step 6: Systemd service -----
 echo ""
 echo "[6/6] Setting up auto-start service..."
+
+# Read Gemini API key from .env if it exists
+GEMINI_KEY=""
+if [ -f "$PROJECT_DIR/.env" ]; then
+    GEMINI_KEY=$(grep -E "^GEMINI_API_KEY=" "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2- | tr -d "'\"" || true)
+fi
+
 SERVICE_FILE="/etc/systemd/system/vision-assistant.service"
 
 sudo tee "$SERVICE_FILE" > /dev/null << EOF
@@ -117,11 +151,11 @@ Wants=sound.target
 [Service]
 Type=simple
 User=$(whoami)
-WorkingDirectory=$SCRIPT_DIR/..
-ExecStart=$SCRIPT_DIR/../venv/bin/python -m rpi_assistant.main
+WorkingDirectory=$PROJECT_DIR
+ExecStart=$PROJECT_DIR/venv/bin/python -m rpi_assistant.main
 Restart=on-failure
 RestartSec=5
-Environment=GEMINI_API_KEY=${GEMINI_API_KEY:-}
+Environment=GEMINI_API_KEY=${GEMINI_KEY}
 
 [Install]
 WantedBy=multi-user.target
@@ -129,31 +163,27 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable vision-assistant.service
-echo "  ✅ Auto-start service created"
+echo "  Done. Service enabled (starts on boot)."
 
-# Done!
+# ----- Complete -----
 echo ""
 echo "============================================"
-echo "  ✅ Setup Complete!"
+echo "  Setup Complete"
 echo "============================================"
 echo ""
-echo "To run manually:"
-echo "  cd $SCRIPT_DIR/.."
+echo "Run manually:"
+echo "  cd $PROJECT_DIR"
 echo "  source venv/bin/activate"
-echo "  export GEMINI_API_KEY='your-key-here'"
 echo "  python -m rpi_assistant.main"
 echo ""
-echo "To start as service:"
+echo "Run as service:"
 echo "  sudo systemctl start vision-assistant"
-echo ""
-echo "To check service status:"
 echo "  sudo systemctl status vision-assistant"
-echo ""
-echo "To view logs:"
 echo "  journalctl -u vision-assistant -f"
 echo ""
-echo "⚠️  Don't forget to set your Gemini API key!"
-echo "  Edit /etc/systemd/system/vision-assistant.service"
-echo "  and set Environment=GEMINI_API_KEY=your-key"
-echo "  Then: sudo systemctl daemon-reload && sudo systemctl restart vision-assistant"
-echo ""
+if [ -z "$GEMINI_KEY" ] || [ "$GEMINI_KEY" = "your-api-key-here" ]; then
+    echo "NOTE: Gemini API key not set."
+    echo "  Edit .env and add your key, then re-run this script"
+    echo "  or update the systemd service manually."
+    echo ""
+fi
