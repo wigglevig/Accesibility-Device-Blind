@@ -18,14 +18,14 @@ CAMERA_WIDTH = 640                  # Frame width (lower = faster on RPi)
 CAMERA_HEIGHT = 480                 # Frame height
 
 # GPIO Pin Assignments (BCM numbering)
-# Set to None to disable a component
-BUTTON_DESCRIBE_PIN = 17            # Button 1: "Describe scene" (Gemini AI)
-BUTTON_ASK_PIN = 27                 # Button 2: "Ask AI a question" (voice + Gemini)
-BUTTON_SUMMARY_PIN = 22            # Button 3: "What objects are around me?" (YOLO)
+# Set to None to disable a component you don't have wired
+BUTTON_DESCRIBE_PIN = None          # Button 1: "Describe scene" (using keyboard instead)
+BUTTON_ASK_PIN = None               # Button 2: "Ask AI a question" (using keyboard)
+BUTTON_SUMMARY_PIN = None           # Button 3: "What objects are around me?" (using keyboard)
 
-ULTRASONIC_TRIGGER_PIN = 23         # HC-SR04 Trigger
-ULTRASONIC_ECHO_PIN = 24            # HC-SR04 Echo
-VIBRATION_MOTOR_PIN = 25            # Vibration motor (via transistor)
+ULTRASONIC_TRIGGER_PIN = None       # HC-SR04 Trigger (set to 23 when wired)
+ULTRASONIC_ECHO_PIN = None          # HC-SR04 Echo (set to 24 when wired)
+VIBRATION_MOTOR_PIN = None          # Vibration motor (set to 25 when wired)
 
 # ============================================================
 # AUDIO CONFIGURATION

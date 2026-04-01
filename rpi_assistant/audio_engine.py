@@ -14,7 +14,8 @@ Features:
 import threading
 import queue
 import time
-import pyttsx3
+import subprocess
+import shutil
 import speech_recognition as sr
 from enum import IntEnum
 
@@ -182,20 +183,46 @@ class AudioEngine:
 
     def _tts_worker(self):
         """Background thread that processes the speech queue."""
-        # Create TTS engine in this thread (pyttsx3 is not thread-safe across threads)
-        self._engine = pyttsx3.init()
-        self._engine.setProperty('rate', TTS_RATE)
-        self._engine.setProperty('volume', TTS_VOLUME)
+        # Try pyttsx3 first, fall back to espeak subprocess
+        use_espeak_subprocess = False
 
-        # Try to set a natural voice
-        voices = self._engine.getProperty('voices')
-        for voice in voices:
-            # Prefer English voices
-            if 'english' in voice.name.lower() or 'en' in voice.languages[0].lower() if voice.languages else False:
-                self._engine.setProperty('voice', voice.id)
-                break
+        try:
+            import pyttsx3
+            self._engine = pyttsx3.init()
+            self._engine.setProperty('rate', TTS_RATE)
+            self._engine.setProperty('volume', TTS_VOLUME)
 
-        print("[AUDIO] TTS engine initialized")
+            # Try to set a natural English voice (skip if it fails)
+            try:
+                voices = self._engine.getProperty('voices')
+                for voice in voices:
+                    if voice.languages and 'en' in str(voice.languages[0]).lower():
+                        self._engine.setProperty('voice', voice.id)
+                        break
+            except Exception:
+                pass  # Keep default voice
+
+            # Test that it actually works
+            self._engine.say("")
+            self._engine.runAndWait()
+            print("[AUDIO] TTS engine initialized (pyttsx3)")
+
+        except Exception as e:
+            print(f"[AUDIO] pyttsx3 failed: {e}")
+            print("[AUDIO] Falling back to espeak subprocess...")
+            self._engine = None
+            use_espeak_subprocess = True
+
+            # Check if espeak or espeak-ng is available
+            if shutil.which("espeak-ng"):
+                self._espeak_cmd = "espeak-ng"
+            elif shutil.which("espeak"):
+                self._espeak_cmd = "espeak"
+            else:
+                print("[AUDIO] ERROR: No TTS engine available! Install espeak-ng.")
+                return
+
+            print(f"[AUDIO] TTS engine initialized ({self._espeak_cmd})")
 
         while self._running:
             try:
@@ -208,8 +235,17 @@ class AudioEngine:
                     self.on_speaking_start()
 
                 print(f"[AUDIO] Speaking: {text[:80]}...")
-                self._engine.say(text)
-                self._engine.runAndWait()
+
+                if use_espeak_subprocess:
+                    # espeak rate: ~175 is default, pyttsx3 rate 160 ~ espeak 160
+                    subprocess.run(
+                        [self._espeak_cmd, "-s", str(TTS_RATE), text],
+                        capture_output=True,
+                        timeout=60,
+                    )
+                else:
+                    self._engine.say(text)
+                    self._engine.runAndWait()
 
                 self._speaking = False
                 if self.on_speaking_stop:
