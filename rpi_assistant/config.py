@@ -103,12 +103,21 @@ def is_raspberry_pi():
 RUNNING_ON_RPI = is_raspberry_pi()
 
 # ============================================================
-# DEVELOPMENT MODE
+# INPUT MODE
 # ============================================================
 
-# When not on RPi, use keyboard instead of GPIO buttons
+# Set to True to use keyboard (type 1/2/3/q) instead of GPIO buttons.
+# Useful when running on RPi without physical buttons wired up,
+# e.g. with a USB keyboard + monitor + earphones setup.
+# Set to False when you have physical GPIO buttons connected.
+USE_KEYBOARD_INPUT = True
+
+# When not on RPi, always force keyboard mode
 DEV_MODE = not RUNNING_ON_RPI
 if DEV_MODE:
+    USE_KEYBOARD_INPUT = True
     print("[CONFIG] Running in DEVELOPMENT mode (keyboard controls)")
+elif USE_KEYBOARD_INPUT:
+    print("[CONFIG] Running on Raspberry Pi (keyboard controls)")
 else:
     print("[CONFIG] Running on Raspberry Pi (GPIO controls)")

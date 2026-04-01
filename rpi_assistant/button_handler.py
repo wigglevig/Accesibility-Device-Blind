@@ -19,7 +19,7 @@ from rpi_assistant.config import (
     BUTTON_ASK_PIN,
     BUTTON_SUMMARY_PIN,
     RUNNING_ON_RPI,
-    DEV_MODE,
+    USE_KEYBOARD_INPUT,
 )
 
 
@@ -48,17 +48,20 @@ class ButtonHandler:
         self._debounce_time = 0.3   # 300ms debounce
         self._last_press = {}       # Track last press time per button
 
-        # GPIO setup (RPi only)
+        # GPIO setup (only when on RPi AND not using keyboard input)
         self._gpio = None
-        if RUNNING_ON_RPI:
+        self._use_keyboard = USE_KEYBOARD_INPUT
+        if RUNNING_ON_RPI and not self._use_keyboard:
             try:
                 import RPi.GPIO as GPIO
                 self._gpio = GPIO
                 self._setup_gpio()
             except ImportError:
                 print("[BUTTONS] RPi.GPIO not available, falling back to keyboard mode")
+                self._use_keyboard = True
             except Exception as e:
                 print(f"[BUTTONS] GPIO setup failed: {e}, falling back to keyboard mode")
+                self._use_keyboard = True
 
     def _setup_gpio(self):
         """Configure GPIO pins for button input."""
@@ -84,7 +87,7 @@ class ButtonHandler:
             return
         self._running = True
 
-        if self._gpio and RUNNING_ON_RPI:
+        if self._gpio and not self._use_keyboard:
             self._start_gpio()
         else:
             self._start_keyboard()
@@ -94,7 +97,7 @@ class ButtonHandler:
     def stop(self):
         """Stop listening for button presses."""
         self._running = False
-        if self._gpio and RUNNING_ON_RPI:
+        if self._gpio and not self._use_keyboard:
             try:
                 self._gpio.cleanup()
             except Exception:

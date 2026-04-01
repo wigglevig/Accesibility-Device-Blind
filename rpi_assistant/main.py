@@ -25,7 +25,7 @@ import threading
 import signal
 import sys
 
-from rpi_assistant.config import DEV_MODE, RUNNING_ON_RPI
+from rpi_assistant.config import DEV_MODE, RUNNING_ON_RPI, USE_KEYBOARD_INPUT
 from rpi_assistant.audio_engine import AudioEngine, Priority
 from rpi_assistant.button_handler import ButtonHandler
 from rpi_assistant.camera import Camera
@@ -118,7 +118,7 @@ class VisionAssistant:
 
         # Announce ready
         ready_message = "Vision assistant is ready. "
-        if DEV_MODE:
+        if USE_KEYBOARD_INPUT:
             ready_message += (
                 "Press 1 to describe your surroundings. "
                 "Press 2 to ask me a question. "
