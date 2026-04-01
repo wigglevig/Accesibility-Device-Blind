@@ -36,14 +36,12 @@ echo ""
 echo "[1/6] Installing system dependencies..."
 sudo apt-get update -qq
 
-# Core dependencies that exist across RPi OS versions
-# Using || true per package to skip unavailable ones gracefully
+# Core dependencies
 sudo apt-get install -y -qq \
     python3-pip \
     python3-venv \
     python3-dev \
     git \
-    portaudio19-dev \
     espeak \
     espeak-ng \
     flac \
@@ -59,6 +57,14 @@ sudo apt-get install -y -qq \
     libv4l-dev \
     v4l-utils \
     2>/dev/null || true
+
+# PortAudio headers — needed to build pyaudio from source
+# Package name varies across Debian/RPi OS versions
+echo "  Installing PortAudio dev headers..."
+sudo apt-get install -y portaudio19-dev 2>/dev/null || \
+    sudo apt-get install -y libportaudio2 libportaudiocpp0 portaudio19-dev 2>/dev/null || \
+    sudo apt-get install -y libportaudio-dev 2>/dev/null || \
+    echo "  WARNING: Could not install portaudio headers. PyAudio may fail."
 
 # These may not exist on Bookworm — install if available, skip if not
 sudo apt-get install -y -qq libtiff5 2>/dev/null || \
@@ -92,7 +98,7 @@ pip install -q torch torchvision torchaudio 2>/dev/null || \
     pip install -q torch torchvision 2>/dev/null || \
     echo "  WARNING: PyTorch install failed. Try manually: pip install torch torchvision"
 
-# Everything else
+# Core packages (without pyaudio — installed separately below)
 pip install -q \
     ultralytics \
     opencv-python-headless \
@@ -100,9 +106,15 @@ pip install -q \
     Pillow \
     pyttsx3 \
     SpeechRecognition \
-    pyaudio \
     google-genai \
     python-dotenv
+
+# PyAudio — needs portaudio headers, install separately so failure doesn't break everything
+echo "  Installing PyAudio..."
+pip install pyaudio 2>/dev/null || \
+    pip install --no-build-isolation pyaudio 2>/dev/null || \
+    echo "  WARNING: PyAudio install failed. Microphone input may not work."
+echo "  If PyAudio failed, run: sudo apt-get install portaudio19-dev && pip install pyaudio"
 
 # RPi.GPIO — usually pre-installed, but ensure it's in the venv
 pip install -q RPi.GPIO 2>/dev/null || true
